@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import requests
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import os
@@ -98,10 +99,41 @@ def load_education_data():
     print(f"Loaded: {len(df)} rows")
     return df
 
+def download_file(url, destination):
+    """Download a file from URL if it doesn't exist"""
+    destination_path = Path(destination)
+    
+    # Create directory if it doesn't exist
+    destination_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Download only if file doesn't exist
+    if not destination_path.exists():
+        print(f"Downloading {destination_path.name}...")
+        try:
+            response = requests.get(url, stream=True)
+            response.raise_for_status()
+            
+            with open(destination_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            print(f"✓ Downloaded: {destination_path.name}")
+        except Exception as e:
+            print(f"✗ Error downloading {destination_path.name}: {e}")
+            raise
+    else:
+        print(f"✓ File already exists: {destination_path.name}")
+
 def load_censo_social():
     """Load 2018 census data for Jamundí"""
     print("Loading 2018 census data...")
-    df = pd.read_excel('datos/PERSONAS_SOCIAL_Cuadros_CNPV_2018.XLSX', sheet_name='1PM', skiprows=9, header=0)
+    
+    # Download file if needed
+    url = 'https://www.dane.gov.co/files/censo2018/informacion-tecnica/PERSONAS_SOCIAL_Cuadros_CNPV_2018.XLSX'
+    file_path = 'datos/PERSONAS_SOCIAL_Cuadros_CNPV_2018.XLSX'
+    download_file(url, file_path)
+    
+    df = pd.read_excel(file_path, sheet_name='1PM', skiprows=9, header=0)
 
     new_col_names = {k: re.sub(r' .[0-9]+', '', k) + ' - ' + i + ': ' + j if i and j else k for i, j, k in zip(df.iloc[0].ffill(axis='index').fillna('').values,df.iloc[1].fillna('').values,df.columns.values)}
 
@@ -137,7 +169,13 @@ def load_censo_social():
 def load_censo_proyecciones():
     """Load and filter population projections for Jamundí"""
     print("Loading population projections...")
-    df = pd.read_excel('datos/DCD-area-proypoblacion-Mun-2020-2035-ActPostCOVID-19.xlsx', sheet_name='Hoja1', skiprows=8, header=0)
+    
+    # Download file if needed
+    url = 'https://www.dane.gov.co/files/censo2018/proyecciones-de-poblacion/Municipal/DCD-area-proypoblacion-Mun-2020-2035-ActPostCOVID-19.xlsx'
+    file_path = 'datos/DCD-area-proypoblacion-Mun-2020-2035-ActPostCOVID-19.xlsx'
+    download_file(url, file_path)
+    
+    df = pd.read_excel(file_path, sheet_name='Hoja1', skiprows=8, header=0)
     
     df = df[df['DPMP'].str.contains('Jamund', na=False)]
     df = df.iloc[:-3]
