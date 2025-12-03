@@ -7,7 +7,7 @@
 !.env.example
 
 # Data folder
-/preparacion datos/datos/
+/preparacion de datos/datos/
 
 # Additional common patterns (optional)
 *.pyc
